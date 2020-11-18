@@ -11,10 +11,13 @@ import {
 	CompletionItem, CompletionItemKind, CompletionList, Position,
 	InsertTextFormat, MarkupContent,
 	SymbolInformation, SymbolKind, DocumentSymbol, Location, Hover, MarkedString, FormattingOptions, DefinitionLink
-} from 'vscode-languageserver-types';
+} from 'vscode-languageserver-types'; 
+// 还有这个库？？？ 一般我都是从 vscode-languageserver 导类型 
+// 可以学习一下 vscode-languageserver-types 项目工程结构，将底层 types 作为一个工程单独导出。
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
+// vscode-json-languageserver 是使用了一个文件，将这些类型导出。
 export {
 	TextDocument,
 	Range, TextEdit, JSONSchema, JSONWorkerContribution, JSONPath, Segment, CompletionsCollector,
@@ -28,6 +31,7 @@ export {
 /**
  * Error codes used by diagnostics
  */
+// 错误的类型枚举，这里用十六进制，要搞什么事情？？
 export enum ErrorCode {
 	Undefined = 0,
 	EnumValueMismatch = 1,
@@ -50,8 +54,18 @@ export enum ErrorCode {
 	SchemaResolveError = 0x300
 }
 
+// AST 的类型
 export type ASTNode = ObjectASTNode | PropertyASTNode | ArrayASTNode | StringASTNode | NumberASTNode | BooleanASTNode | NullASTNode;
 
+// AST 的基础类型，所有 Node 子类都集成它
+// 然后子类型各种扩展
+// 我一般是把 type 做成一个枚举。然后 ASTNode 做成支持该枚举的泛型：
+//   emun ASTNodeType ={Object, Property}; 
+//   interface BaseASTNode {type: ASTNodeType}
+//   interface ObjectASTNode {type: ASTNodeType.Object}
+//   interface PropertyASTNode {type: ASTNodeType.Property}
+//   type ASTNode<T extends ASTNodeType> = T extends ASTNodeType.Object ? ObjectASTNode :  T extends ASTNodeType.Property ? PropertyASTNode : never
+// 可以比较一下两者那种好
 export interface BaseASTNode {
 	readonly type: 'object' | 'array' | 'property' | 'string' | 'number' | 'boolean' | 'null';
 	readonly parent?: ASTNode;
@@ -170,6 +184,7 @@ export interface SchemaRequestService {
 	(uri: string): Thenable<string>;
 }
 
+// promise 自己搞？不导 es2015 lib 上的？
 export interface PromiseConstructor {
 	/**
 	 * Creates a new Promise.
@@ -213,6 +228,7 @@ export interface Thenable<R> {
 	then<TResult>(onfulfilled?: (value: R) => TResult | Thenable<TResult>, onrejected?: (reason: any) => void): Thenable<TResult>;
 }
 
+// 应该是初始化参数
 export interface LanguageServiceParams {
 	/**
 	 * The schema request service is used to fetch schemas from a URI. The provider returns the schema file content, or,

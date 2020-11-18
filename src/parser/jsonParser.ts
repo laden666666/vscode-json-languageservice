@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// json 编译靠这个，不知道是否支持容错能力 
 import * as Json from 'jsonc-parser';
 import { JSONSchema, JSONSchemaRef } from '../jsonSchema';
 import { isNumber, equals, isBoolean, isString, isDefined } from '../utils/objects';
 import { TextDocument, ASTNode, ObjectASTNode, ArrayASTNode, BooleanASTNode, NumberASTNode, StringASTNode, NullASTNode, PropertyASTNode, JSONPath, ErrorCode, Diagnostic, DiagnosticSeverity, Range } from '../jsonLanguageTypes';
 
+// 应该是国际化相关的
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -17,6 +19,7 @@ export interface IRange {
 	length: number;
 }
 
+// 几种form 形式？？？
 const formats = {
 	'color-hex': { errorMessage: localize('colorHexFormatWarning', 'Invalid color format. Use #RGB, #RGBA, #RRGGBB or #RRGGBBAA.'), pattern: /^#([0-9A-Fa-f]{3,4}|([0-9A-Fa-f]{2}){3,4})$/ },
 	'date-time': { errorMessage: localize('dateTimeFormatWarning', 'String is not a RFC3339 date-time.'), pattern: /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)([01][0-9]|2[0-3]):([0-5][0-9]))$/i },
@@ -951,20 +954,25 @@ function validate(n: ASTNode | undefined, schema: JSONSchema, validationResult: 
 
 }
 
-
+// 核心方法，看着一个函数就够了
 export function parse(textDocument: TextDocument, config?: JSONDocumentConfig): JSONDocument {
 
+	// 诊断错误
 	const problems: Diagnostic[] = [];
 	let lastProblemOffset = -1;
 	const text = textDocument.getText();
+	// 主要靠它分词？？？
 	const scanner = Json.createScanner(text, false);
 
+	// ？？？？？？ JSON 这玩意支持注释？？？？
 	const commentRanges: Range[] | undefined = config && config.collectComments ? [] : undefined;
 
+	// 词法分析函数
 	function _scanNext(): Json.SyntaxKind {
 		while (true) {
 			const token = scanner.scan();
 			_checkScanError();
+			// 核心
 			switch (token) {
 				case Json.SyntaxKind.LineCommentTrivia:
 				case Json.SyntaxKind.BlockCommentTrivia:
@@ -998,6 +1006,16 @@ export function parse(textDocument: TextDocument, config?: JSONDocumentConfig): 
 		}
 	}
 
+	/**
+	 * 错误处理，这里有容错能力
+	 * @template T
+	 * @param {string} message
+	 * @param {ErrorCode} code
+	 * @param {(T | undefined)} [node=undefined]
+	 * @param {Json.SyntaxKind[]} [skipUntilAfter=[]]		允许忽略的 token 类型及该token 后面的token，这种错误处理方式值得学习
+	 * @param {Json.SyntaxKind[]} [skipUntil=[]]				允许忽略的 token 类型，这种错误处理方式值得学习
+	 * @returns {(T | undefined)}
+	 */
 	function _error<T extends ASTNodeImpl>(message: string, code: ErrorCode, node: T | undefined = undefined, skipUntilAfter: Json.SyntaxKind[] = [], skipUntil: Json.SyntaxKind[] = []): T | undefined {
 		let start = scanner.getTokenOffset();
 		let end = scanner.getTokenOffset() + scanner.getTokenLength();
@@ -1008,6 +1026,7 @@ export function parse(textDocument: TextDocument, config?: JSONDocumentConfig): 
 			}
 			end = start + 1;
 		}
+		// 记录错误
 		_errorAtRange(message, code, start, end);
 
 		if (node) {
@@ -1028,6 +1047,7 @@ export function parse(textDocument: TextDocument, config?: JSONDocumentConfig): 
 		return node;
 	}
 
+	// 校验错误
 	function _checkScanError(): boolean {
 		switch (scanner.getTokenError()) {
 			case Json.ScanError.InvalidUnicode:
@@ -1061,6 +1081,8 @@ export function parse(textDocument: TextDocument, config?: JSONDocumentConfig): 
 
 		return node;
 	}
+
+	// 各种 parse 方法，看来是递归下降法
 
 	function _parseArray(parent: ASTNode | undefined): ArrayASTNode | undefined {
 		if (scanner.getToken() !== Json.SyntaxKind.OpenBracketToken) {
@@ -1240,11 +1262,14 @@ export function parse(textDocument: TextDocument, config?: JSONDocumentConfig): 
 	}
 
 	function _parseValue(parent: ASTNode | undefined): ASTNode | undefined {
+		// 还是一个递归下降分析算法，靠最左侧是否符合特定终结符，判断是否能递归调用 parse 子函数
+		// 6666 用 “||” 代替 switch 语句
 		return _parseArray(parent) || _parseObject(parent) || _parseString(parent) || _parseNumber(parent) || _parseLiteral(parent);
 	}
 
 	let _root: ASTNode | undefined = undefined;
 	const token = _scanNext();
+	// 
 	if (token !== Json.SyntaxKind.EOF) {
 		_root = _parseValue(_root);
 		if (!_root) {

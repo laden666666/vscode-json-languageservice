@@ -8,6 +8,7 @@ import { ISchemaContributions } from './jsonSchemaService';
 import * as nls from 'vscode-nls';
 const localize = nls.loadMessageBundle();
 
+// 配置文件直接用 json schema 写，有点自举的味道
 export const schemaContributions: ISchemaContributions = {
 	schemaAssociations: [],
 	schemas: {

@@ -34,6 +34,7 @@ export type JSONDocument = {
 };
 export * from './jsonLanguageTypes';
 
+// lsp 的接口
 export interface LanguageService {
 	configure(settings: LanguageSettings): void;
 	doValidation(document: TextDocument, jsonDocument: JSONDocument, documentSettings?: DocumentLanguageSettings, schema?: JSONSchema): Thenable<Diagnostic[]>;
@@ -57,7 +58,7 @@ export interface LanguageService {
 	findLinks(document: TextDocument, doc: JSONDocument): Thenable<DocumentLink[]>;
 }
 
-
+// 一个工厂函数
 export function getLanguageService(params: LanguageServiceParams): LanguageService {
 	const promise = params.promiseConstructor || Promise;
 
@@ -69,6 +70,7 @@ export function getLanguageService(params: LanguageServiceParams): LanguageServi
 	const jsonDocumentSymbols = new JSONDocumentSymbols(jsonSchemaService);
 	const jsonValidation = new JSONValidation(jsonSchemaService, promise);
 
+	// 直接字面量拼对象，也是醉。。。，就看几个感兴趣的功能
 	return {
 		configure: (settings: LanguageSettings) => {
 			jsonSchemaService.clearExternalSchemas();
